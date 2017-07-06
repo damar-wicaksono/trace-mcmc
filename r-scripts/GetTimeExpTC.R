@@ -38,7 +38,7 @@ GetTimeExpTC <- function(exp_data, trc_time, trc_nom, trc_runs,
     # Loop over 8 axial locations
     trc_time_restricted_pts <- list()
     trc_time_restricted_idx <- list()
-    for (j in 1:8)
+    for (j in 1:dim(tc_nom)[2])
     {
         # Compute the time of quenching at an axial location for all samples
         trc_runs_tquench <- c()
