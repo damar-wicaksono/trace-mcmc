@@ -17,6 +17,8 @@
 #' @param trc_time Numeric vector. TRACE output time points
 #' @param trc_nom Matrix. TRACE temperature output, nominal run
 #' @param trc_runs Array. TRACE temperature output, bias model training runs
+#' @param d_t Numeric. TRACE time step size
+#' @param t_min Numeric. Minimum temperature to be considered "quenched"
 #' @return List of lists, $idx is the list with time indices for each axial 
 #'  location, while $pts is the list with time points for each axial location,
 #'  taken from the experimental data table with temperature measurement
@@ -38,7 +40,7 @@ GetTimeExpTC <- function(exp_data, trc_time, trc_nom, trc_runs,
     # Loop over 8 axial locations
     trc_time_restricted_pts <- list()
     trc_time_restricted_idx <- list()
-    for (j in 1:dim(tc_nom)[2])
+    for (j in 1:dim(trc_nom)[2])
     {
         # Compute the time of quenching at an axial location for all samples
         trc_runs_tquench <- c()
@@ -59,7 +61,6 @@ GetTimeExpTC <- function(exp_data, trc_time, trc_nom, trc_runs,
         trc_exp_time <- trc_time[trc_time_idx]
         for (i in length(trc_time_idx):1)
         {
-            print(min(trc_runs[trc_time_idx[i],,j]) %/% 100.)
             # Remove one point of experimental data if:
             if (min(trc_runs_tquench) < trc_exp_time[i])  
             {
