@@ -19,10 +19,12 @@
 #' @param trc_runs Array. TRACE temperature output, bias model training runs
 #' @param d_t Numeric. TRACE time step size
 #' @param t_min Numeric. Minimum temperature to be considered "quenched"
-#' @return List of lists, $idx is the list with time indices for each axial 
-#'  location, while $pts is the list with time points for each axial location,
-#'  taken from the experimental data table with temperature measurement
-#'  up to before quenching occur for all the training runs for the bias model
+#' @return List. $exp_idx is the number of experimental points before 
+#'  quenching, $trc_idx is the list with time indices for each axial 
+#'  location, while $trc_pts is the list with time points for each axial 
+#'  location, taken from the experimental data table with temperature 
+#'  measurement up to before quenching occur for all the training runs 
+#'  for the bias model
 GetTimeExpTC <- function(exp_data, trc_time, trc_nom, trc_runs, 
                          d_t = 0.1, t_min = 400.)
 {
@@ -88,8 +90,9 @@ GetTimeExpTC <- function(exp_data, trc_time, trc_nom, trc_runs,
     }
 
     output <- list(
-        idx = trc_time_restricted_idx,
-        pts = trc_time_restricted_pts
+        exp_idx = exp_tquench_idx,
+        trc_idx = trc_time_restricted_idx,
+        trc_pts = trc_time_restricted_pts
     )
 
     return(output)
