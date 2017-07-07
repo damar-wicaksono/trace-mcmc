@@ -7,39 +7,26 @@
 #' 
 #' @param xx Numeric vector. BC-related model parameters values for GP 
 #'  metamodel of Bias
-#' @param aux_variables Matrix. BC 
-#' @param str_name Character vector. Names of the input parameters
-#' @return Dataframe. A single element dataframe to be used in GP metamodel of
-#'  PC scores
-CreateInputBias <- function(xx, str_names, time_points, ax_locs)
+#' @param str_names Character vector. Names of the input parameters
+#' @param time_pts Numeric vector.
+#' @param ax_locs Numeric vector. BC 
+#' @return Dataframe. Expanded grid of BC-related model parameters column 
+#'  binded with time points and axial location (if specified) grid
+CreateInputBias <- function(xx, str_names, time_pts, ax_locs = NULL)
 {
-    if (!is.na(ax_locs))
+    xx <- matrix(xx, nrow = 1)
+    if (!is.null(ax_locs))
     {
-        length_xx <- unique(ax_locs) * unique(time_points)
-        xx_df <- data.frame(matrix(0, ncol = length(xx) + 2, nrow = length_xx))
+        # Create Z-T grid but switch column because time is varying fastest
+        zt_grid <- expand.grid(time_pts, ax_locs)[,c(2,1)] 
     } else 
     {
-        length_xx <- unique(time_points)
-        xx_df <- data.frame(matrix(0, ncol = length(xx) + 1, nrow = length_xx))
+        zt_grid <- expand.grid(time_pts)
     }
     
-    time_steps <- unique(trc_dis_gp@X[,6])[-1]
-    ax_locs <- unique(trc_dis_gp@X[,5])
-    xx_bias_complete <- data.frame(x1 = c(), x2 = c(), x3 = c(), x4 = c(), 
-                                   z = c(), t = c())
-    for (i in 1:length(ax_locs)) 
-    {
-        n_ts <- length(idx_time_restricted[[i]][-1])
-        for (j in 1:n_ts)
-        {
-            xx_bias_complete <- rbind(xx_bias_complete, 
-                                      data.frame(x1 = xx_bias[1],
-                                                 x2 = xx_bias[2],
-                                                 x3 = xx_bias[3],
-                                                 x4 = xx_bias[4],
-                                                 z = ax_locs[i],
-                                                 t = time_steps[j]))    
-        }
-    }
-    return(xx_bias_complete)
+    # Repeat xx as many as there is row in zt-grid before column binding
+    xx_df <- cbind(xx[rep(1:nrow(xx), times = nrow(zt_grid)),], zt_grid)
+    names(xx_df) <- str_names
+    
+    return(xx_df)
 }
