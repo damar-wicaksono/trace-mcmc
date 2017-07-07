@@ -7,7 +7,7 @@
 #' from the MCMC sampler.
 #' 
 #' @param xx Numeric vector. Input values for GP metamodel of PC scores
-#' @param str_name Character vector. Names of the input parameters
+#' @param str_names Character vector. Names of the input parameters
 #' @return Dataframe. A single element dataframe to be used in GP metamodel of
 #'  PC scores
 CreateInputPCScores <- function(xx, str_names)
