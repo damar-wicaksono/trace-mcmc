@@ -13,7 +13,7 @@ dhalfcauchy <- function(x, location = 0, scale = 25, log = FALSE)
 {
     if (all(x < 0))
     {
-        return(0)
+        if (log) {return(log(0))} else {return(0)}
     } else
     {   
         x <- x[x >= 0]  # Exclude negative value
