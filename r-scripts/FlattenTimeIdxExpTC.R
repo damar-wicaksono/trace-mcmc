@@ -21,7 +21,8 @@ FlattenTimeIdxExpTC <- function(time_idx_list, n_time, excl_idx)
     for (i in 1:length(time_idx_list))
     {
         time_idx_vec <- c(time_idx_vec, 
-                          (time_idx_list[[i]][-excl_idx] - length(excl_idx)) + (i - 1) * (n_time - length(excl_idx)))
+                          (time_idx_list[[i]][-excl_idx] - length(excl_idx)) + 
+                          (i - 1) * (n_time - length(excl_idx)))
     }
 
     return(time_idx_vec)
