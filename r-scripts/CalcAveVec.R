@@ -14,7 +14,8 @@ CalcAveVec <- function(pc_scores_mu, trc_pca_ave, trc_pca_lds, idx)
     # Matrix operation to reconstruct the full output space
     pc_scores_mu <- matrix(pc_scores_mu, nrow = length(pc_scores_mu))
     
-    ave_vec <- trc_pca_ave + trc_pca_lds[, 1:length(pc_scores_mu)] %*% pred_mu
+    ave_vec <- trc_pca_ave + trc_pca_lds[, 1:length(pc_scores_mu)] %*% 
+        pc_scores_mu
     
     # Return only select points in the full output space
     ave_vec <- ave_vec[idx]
