@@ -4,7 +4,7 @@
 #' quenching, \code{GetTimeIdxTC} get the indices of the full model output 
 #' prior to quenching in all axial locations.
 #'
-#' @param trc_data_bias List. List of compiled results from bias model 
+#' @param trc_data_bias List. List of compiled results from bias GP model 
 #'  training runs
 #' @param excl_idx Numeric vector. Indices to be excluded 
 #'  (default = initial time point for each axial location)
