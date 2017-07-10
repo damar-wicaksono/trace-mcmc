@@ -13,6 +13,7 @@
 GetTimeIdxDP <- function(trc_data, d_t = 0.1)
 {
     exp_data <- trc_data_bias$exp_data[[2]]
+    trc_time <- trc_data_bias$time
     res_time <- GetTimeIdxTrc(exp_data[, 1], d_t = d_t)
     res_time <- list(res_time, res_time, res_time, res_time)
     time_idx <- FlattenTimeIdxExp(res_time, length(trc_time))
