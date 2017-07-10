@@ -18,15 +18,14 @@
 #' @param trc_nom Matrix. TRACE temperature output, nominal run
 #' @param trc_runs Array. TRACE temperature output, bias model training runs
 #' @param d_t Numeric. TRACE time step size
-#' @param t_min Numeric. Minimum temperature to be considered "quenched"
+#' @param temp_min Numeric. Minimum temperature to be considered "quenched"
 #' @return List. $exp_idx is the number of experimental points before 
 #'  quenching, $trc_idx is the list with time indices for each axial 
 #'  location, while $trc_pts is the list with time points for each axial 
 #'  location, taken from the experimental data table with temperature 
 #'  measurement up to before quenching occur for all the training runs 
 #'  for the bias model
-GetTimeExpTC <- function(exp_data, trc_time, trc_nom, trc_runs, 
-                         d_t = 0.1, t_min = 400.)
+GetTimeExpTC <- function(exp_data, trc_time, trc_nom, trc_runs, d_t, temp_min)
 {
     n_samples <- dim(trc_runs)[2]  # Number of training samples
     exp_time  <- exp_data[, 1]     # Experimental time points
@@ -70,10 +69,10 @@ GetTimeExpTC <- function(exp_data, trc_time, trc_nom, trc_runs,
                 #    smaller than a given location of time of of quenching 
                 #    experimental time
                 k <- k + 1
-            } else if (min(trc_runs[trc_time_idx[i],,j]) %/% 100. <= t_min %/% 100.)
+            } else if (min(trc_runs[trc_time_idx[i],,j]) %/% 100. <= temp_min %/% 100.)
             {
                 # 2. The minimum temperature of any replication is less 
-                #    or equal t_min [K]
+                #    or equal temp_min [K]
                 k <- k + 1
             } else
             {
