@@ -239,7 +239,7 @@ post_samples <- setInitialValues(
     n_walks,
     n_iters,
     trc_outputs)
-print(post_samples[,,1])
+
 # Run Sampler
 ens <- GoodmanWeare.rem(post_samples, lpost, 
     mc.cores = opt$numprocs, mention.every = 10)
