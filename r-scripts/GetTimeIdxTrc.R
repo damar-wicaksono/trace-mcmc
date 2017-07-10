@@ -8,7 +8,7 @@
 #'   It is assumed that the step size is uniform, that the time grid has been 
 #'   homogenized.
 #' @return Vector of time indices in the TRACE output
-GetTimeIdxTrc <- function(exp_time, d_t = 1e-1)
+GetTimeIdxTrc <- function(exp_time, d_t)
 {
     if (sum(exp_time %% d_t) != 0)
     {
