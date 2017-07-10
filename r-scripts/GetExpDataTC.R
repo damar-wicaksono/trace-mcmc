@@ -22,7 +22,7 @@ GetExpDataTC <- function(trc_data_bias, d_t = 0.1, temp_min = 400.)
         trc_time,
         trc_nom,
         trc_runs,
-        dt,
+        d_t,
         temp_min)
     
     exp_vec <- c()

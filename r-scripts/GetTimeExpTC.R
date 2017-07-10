@@ -27,6 +27,7 @@
 #'  for the bias model
 GetTimeExpTC <- function(exp_data, trc_time, trc_nom, trc_runs, d_t, temp_min)
 {
+
     n_samples <- dim(trc_runs)[2]  # Number of training samples
     exp_time  <- exp_data[, 1]     # Experimental time points
     exp_data  <- exp_data[,-1]     # Experimental TC1-TC8
@@ -37,7 +38,7 @@ GetTimeExpTC <- function(exp_data, trc_time, trc_nom, trc_runs, d_t, temp_min)
     diff_exp_tc <- exp_data[1:(nrow(exp_data)-1),1:8] - 
         exp_data[2:nrow(exp_data),1:8]
     exp_tquench_idx <- apply(diff_exp_tc, 2, which.max)
-
+    
     # Loop over 8 axial locations
     trc_time_restricted_pts <- list()
     trc_time_restricted_idx <- list()
@@ -50,13 +51,13 @@ GetTimeExpTC <- function(exp_data, trc_time, trc_nom, trc_runs, d_t, temp_min)
             trc_runs_tquench <- c(trc_runs_tquench,
                                   kneedle(trc_time, trc_runs[,i,j]))
         }
-    
+        
         # Compute the nominal time of quenching
         trc_nom_tquench <- c(trc_runs_tquench, kneedle(trc_time, trc_nom[,j]))
     
         # The index of time step for TRACE output up to quenching
         trc_time_idx <- exp_time[1:exp_tquench_idx[j]] / d_t + 1 
-    
+
         # Loop over backward from the end of transient
         k <- 0
         trc_exp_time <- trc_time[trc_time_idx]

@@ -22,13 +22,13 @@ GetTimeIdxTC <- function(trc_data_bias,
     trc_time <- trc_data_bias$time
     trc_nom  <- trc_data_bias$nominal[,1:8]
     trc_runs <- trc_data_bias$replicates[,,1:8]
-    
+
     res_time <- GetTimeExpTC(
         exp_data,
         trc_time,
         trc_nom,
         trc_runs,
-        dt,
+        d_t,
         temp_min)
 
     time_idx <- FlattenTimeIdxExp(
