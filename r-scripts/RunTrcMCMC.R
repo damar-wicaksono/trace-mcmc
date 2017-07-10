@@ -31,6 +31,9 @@ option_list <- list(
     make_option(c("--output"), type = "character", default = NULL,
                 help = "The output (tc | dp | co | all)",
                 metavar = "character"),
+    make_option(c("--params_at_nom"), type = "character", default = NULL,
+                help = "The model parameter number to be kept at nominal",
+                metavar = "character"),
     make_option(c("-n", "--numprocs"), type = "integer", default = 1,
                 help = "The number of processors",
                 metavar = "integer"),
@@ -50,6 +53,17 @@ gp_bias_files <- strsplit(opt$bias_gp, ",")[[1]]
 gps_pcs_files <- strsplit(opt$pc_gp, ",")[[1]]
 
 # Read Data -------------------------------------------------------------------
+# parse which parameters to be kept at nominal and which to be sampled/updated
+if (is.null(opt$params_at_nom))
+{
+    at_nom <- 0
+    sampled_idx <- c(1:12)
+} else
+{
+    at_nom <- as.integer(strsplit(opt$params_at_nom, ",")[[1]])
+    sampled_idx <- setdiff(1:12, at_nom)
+}
+
 if (opt$output == "all")
 {
     trc_outputs <- c("tc", "dp", "co")
@@ -110,6 +124,27 @@ for (trc_output in trc_outputs)
 }
 
 # Setup the probabilistic model -----------------------------------------------
+# Log Prior
+# First 12, Model parameters -> uniform [0, 1]
+# Bias scale parameters (standard deviation) -> estimate from the GP model
+if (opt$output != "all")
+{
+    lprior <- function(x)
+    {
+        return(sum(dunif(x[1:(length(x)-1)], 0, 1, log = T)) + 
+                   dhalfcauchy(x[length(x)], init_sd_bias[[1]], log = T))
+    }
+} else
+{
+    lprior <- function(x)
+    {
+        return(sum(dunif(x[1:(length(x)-3)], 0, 1, log = T)) + 
+                   dhalfcauchy(x[(length(x)-2)], init_sd_bias[[1]], log = T) +
+                   dhalfcauchy(x[(length(x)-1)], init_sd_bias[[2]], log = T) +
+                   dhalfcauchy(x[length(x)], init_sd_bias[[3]], log = T))
+    }
+}
+
 # Log Likelihood
 if (opt$output == "all")
 {
@@ -118,21 +153,22 @@ if (opt$output == "all")
     
     # Now the input parameters becomes 15 (12 + 3 bias scale parameters)
     llk <- function(x) {
-        GetLogLikelihood(c(x[1:12], x[13]), 
+        GetLogLikelihood(c(x[1:(length(x)-3)], x[length(x)-2]), sampled_idx,
                       exp_vec[["tc"]], num_pc[["tc"]], time_idx[["tc"]], 
                       trc_gps_pcs[["tc"]], trc_pca_ave[["tc"]], 
                       trc_pca_lds[["tc"]], trc_gp_bias[["tc"]], 
                       ax_locs = unique(trc_gp_bias[["tc"]]@X[,5]),
                       time_pts = unique(trc_gp_bias[["tc"]]@X[,6])[-1],
                       exp_idx_max_tc - 1) +
-            GetLogLikelihood(c(x[1:12], x[14]), 
+            GetLogLikelihood(c(x[1:(length(x)-3)], x[length(x)-1]), 
+                          sampled_idx,
                           exp_vec[["dp"]], num_pc[["dp"]], time_idx[["dp"]], 
                           trc_gps_pcs[["dp"]], trc_pca_ave[["dp"]], 
                           trc_pca_lds[["dp"]], trc_gp_bias[["dp"]], 
                           ax_locs = unique(trc_gp_bias[["dp"]]@X[,5]), 
                           time_pts = unique(trc_gp_bias[["dp"]]@X[,6]), 
                           exp_idx_max_dp) + 
-            GetLogLikelihood(c(x[1:12], x[15]), 
+            GetLogLikelihood(c(x[1:(length(x)-3)], x[length(x)]), sampled_idx,
                           exp_vec[["co"]], num_pc[["co"]], time_idx[["co"]], 
                           trc_gps_pcs[["co"]], trc_pca_ave[["co"]], 
                           trc_pca_lds[["co"]], trc_gp_bias[["co"]],
@@ -146,7 +182,7 @@ if (opt$output == "all")
     time_pts <- unique(trc_gp_bias[["tc"]]@X[,6])
     exp_idx_max <- GetExpTimeQuenchIdx(trc_data_bias)
     llk <- function(x) {
-        GetLogLikelihood(x, 
+        GetLogLikelihood(x, sampled_idx,
                       exp_vec[["tc"]], num_pc[["tc"]], time_idx[["tc"]], 
                       trc_gps_pcs[["tc"]], trc_pca_ave[["tc"]], 
                       trc_pca_lds[["tc"]], trc_gp_bias[["tc"]], 
@@ -159,7 +195,7 @@ if (opt$output == "all")
     exp_idx_max <- rep(length(trc_data_bias$exp_data[[2]][,1]), 4)
     
     llk <- function(x) {
-        GetLogLikelihood(x, 
+        GetLogLikelihood(x, sampled_idx,
                       exp_vec[["dp"]], num_pc[["dp"]], time_idx[["dp"]], 
                       trc_gps_pcs[["dp"]], trc_pca_ave[["dp"]], 
                       trc_pca_lds[["dp"]], trc_gp_bias[["dp"]], 
@@ -171,32 +207,11 @@ if (opt$output == "all")
     time_pts <- unique(trc_gp_bias[["co"]]@X[,5])
 
     llk <- function(x) {
-        GetLogLikelihood(x, 
+        GetLogLikelihood(x, sampled_idx,
                       exp_vec[["co"]], num_pc[["co"]], time_idx[["co"]], 
                       trc_gps_pcs[["co"]], trc_pca_ave[["co"]], 
                       trc_pca_lds[["co"]], trc_gp_bias[["co"]],
                       ax_locs, time_pts)
-    }
-}
-
-# Log Prior
-# First 12, Model parameters -> uniform [0, 1]
-# Bias scale parameters (standard deviation) -> estimate from the GP model
-if (opt$output != "all")
-{
-    lprior <- function(x)
-    {
-        return(sum(dunif(x[1:12], 0, 1, log = T)) + 
-                   dhalfcauchy(x[13], init_sd_bias[[1]], log = T))
-    }
-} else
-{
-    lprior <- function(x)
-    {
-        return(sum(dunif(x[1:12], 0, 1, log = T)) + 
-                   dhalfcauchy(x[13], init_sd_bias[[1]], log = T) +
-                   dhalfcauchy(x[14], init_sd_bias[[2]], log = T) +
-                   dhalfcauchy(x[15], init_sd_bias[[3]], log = T))
     }
 }
 
@@ -217,41 +232,19 @@ lpost <- function(x)
 # Set up AIES Walkers
 n_walks <- opt$n_walks
 n_iters <- opt$n_iters
-sd_multiplier <- list("tc" = 10., "dp" = 100., "co" = 0.1)
 
-# Set up initial values
-if (opt$output != "all")
-{
-    post_samples <- array(NA, dim = c(13, n_walks, n_iters))
-    # Set up initial values, 13 parameters, single output
-    for (i in 1:12)
-    {
-        post_samples[i,,1] = 0.5 + 1e-4 * rnorm(n_walks)
-        
-    }
-    post_samples[13,,1] = init_sd_bias[[1]] + 
-        sd_multiplier[[trc_outputs[1]]] * rnorm(n_walks)
-} else
-{
-    post_samples <- array(NA, dim = c(15, n_walks, n_iters))
-    # Set up initial values, 15 parameters, multiple outputs
-    for (i in 1:12)
-    {
-        post_samples[i,,1] = 0.5 + 1e-4 * rnorm(n_walks)
-        
-    }
-    post_samples[13,,1] = init_sd_bias[[1]] + 
-        sd_multiplier[[trc_outputs[1]]] * rnorm(n_walks)
-    post_samples[14,,1] = init_sd_bias[[2]] + 
-        sd_multiplier[[trc_outputs[2]]] * rnorm(n_walks)
-    post_samples[15,,1] = init_sd_bias[[3]] + 
-        sd_multiplier[[trc_outputs[3]]] * rnorm(n_walks)
-}
-
+post_samples <- setInitialValues(
+    length(sampled_idx),
+    init_sd_bias,
+    n_walks,
+    n_iters,
+    trc_outputs)
+print(post_samples[,,1])
 # Run Sampler
 ens <- GoodmanWeare.rem(post_samples, lpost, 
     mc.cores = opt$numprocs, mention.every = 10)
 
 # Save the samples
 saveRDS(ens, 
-  paste("ens-", opt$output, "-", n_walks, "-", n_iters, ".Rds", sep = ""))
+  paste("ens-", opt$output, "-", n_walks, "-", n_iters, "-", 
+        length(sampled_idx), "params.Rds", sep = ""))

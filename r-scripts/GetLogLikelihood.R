@@ -2,6 +2,7 @@
 #'
 #' @param x Numeric vector. Sampled model parameter, 13 of them. The last one
 #'  is always the scale parameter of the bias model.
+#' @param sampled_idx Numeric vector. Model parameters to be sampled by MCMC.
 #' @param exp_vec Numeric vector. The vector of experimental data.
 #' @param num_pc Numeric. The number of principal components for reconstructing
 #'  full model output.
@@ -15,17 +16,20 @@
 #' @param time_pts Numeric vector. Unique number of time_pts.
 #' @param exp_idx_max Numeric vector. The maximum number of experimental 
 #'  data points per axial location.
-GetLogLikelihood <- function(x, exp_vec, num_pc, time_idx,
+GetLogLikelihood <- function(x, sampled_idx, exp_vec, num_pc, time_idx,
                              trc_gps_pcs, trc_pca_ave, trc_pca_lds, 
                              trc_gp_bias, ax_locs, time_pts, exp_idx_max)
 {
+    xx <- rep(0.5, 12)
+    xx[sampled_idx] <- x[1:(length(x)-1)]
+
     # Construct data frame for sampled inputs, pc scores
     str_names <- trc_gps_pcs[[1]]@covariance@var.names
-    xx_pcs <- CreateInputPCScores(x[1:12], str_names)
+    xx_pcs <- CreateInputPCScores(xx[1:12], str_names)
     
     # Construct data frame for sampled inputs, bias
     str_names <- trc_gp_bias@covariance@var.names
-    xx_bias <- CreateInputBias(x[1:4], 
+    xx_bias <- CreateInputBias(xx[1:4], 
                               str_names, time_pts, 
                               ax_locs, exp_idx_max)
 
@@ -46,7 +50,9 @@ GetLogLikelihood <- function(x, exp_vec, num_pc, time_idx,
                                                time_idx)
 
     # Compute the variance matrix due to model bias
-    bias_var_mat <- CalcBiasVarMat(xx_bias, x[13]^2, trc_gp_bias@covariance)
+    bias_var_mat <- CalcBiasVarMat(xx_bias, 
+        x[length(x)]^2, 
+        trc_gp_bias@covariance)
     
     # Compute the variance matrix based on the restricted time
     var_mat <- kriging_var_mat + truncation_var_mat + bias_var_mat

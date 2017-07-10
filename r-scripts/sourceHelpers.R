@@ -15,3 +15,5 @@ source("./r-scripts/GetExpDataCO.R")
 source("./r-scripts/GetExpTimeQuenchIdx.R")
 
 source("./r-scripts/GetLogLikelihood.R")
+
+source("./r-scripts/setInitialValues.R")
