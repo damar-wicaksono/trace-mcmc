@@ -7,7 +7,7 @@
 #' @param d_t Numeric. The time step size in the uniform time grid of full 
 #'  output space (default = 0.1 [s])
 #' @param temp_min Numeric. The minimum temperature in [K] where the rod can  
-#'  be assumed to be quenched, (default = 400.0 [K])
+#'  be assumed to be quenched (default = 400.0 [K])
 #' @return Numeric vector. The TC experimental data points selected before 
 #'  quenching
 GetExpDataTC <- function(trc_data_bias, d_t = 0.1, temp_min = 400.)
