@@ -45,7 +45,16 @@ option_list <- list(
                 metavar = "integer"),
     make_option(c("--output_file"), type = "character", default = NULL,
                 help = "The output filename",
-                metavar = "character")
+                metavar = "character"),
+    make_option(c("--correct_bias"), type = "logical", default = FALSE,
+                help = "Flag for correcting bias",
+                metavar = "logical"),
+    make_option(c("--fix_scale"), type = "logical", default = FALSE,
+                help = "Flag to fix scale parameter",
+                metavar = "logical"),
+    make_option(c("--fix_bc"), type = "logical", default = FALSE,
+                help = "Flag to fix BC-related parameters in GP metamodel",
+                metavar = "logical")
 )
 
 opt_parser <- OptionParser(option_list = option_list) # Create opt. parser obj.
@@ -130,95 +139,136 @@ for (trc_output in trc_outputs)
 # Log Prior
 # First 12, Model parameters -> uniform [0, 1]
 # Bias scale parameters (standard deviation) -> estimate from the GP model
-if (opt$output != "all")
+if (opt$fix_scale)
 {
     lprior <- function(x)
     {
-        return(sum(dunif(x[1:(length(x)-1)], 0, 1, log = T)) + 
-                   dhalfcauchy(x[length(x)], init_sd_bias[[1]], log = T))
+        return(sum(dunif(x, 0, 1, log = T)))
     }
 } else
 {
-    lprior <- function(x)
+    if (opt$output != "all")
     {
+        lprior <- function(x)
+        {
+            return(sum(dunif(x[1:(length(x)-1)], 0, 1, log = T)) + 
+                       dhalfcauchy(x[length(x)], init_sd_bias[[1]], log = T))
+        }
+    } else
+    {
+        lprior <- function(x)
+        {
         return(sum(dunif(x[1:(length(x)-3)], 0, 1, log = T)) + 
                    dhalfcauchy(x[(length(x)-2)], init_sd_bias[[1]], log = T) +
                    dhalfcauchy(x[(length(x)-1)], init_sd_bias[[2]], log = T) +
                    dhalfcauchy(x[length(x)], init_sd_bias[[3]], log = T))
+        }
     }
 }
 
 # Log Likelihood
 if (opt$output == "all")
 {
-    exp_idx_max_tc <- GetExpTimeQuenchIdx(trc_data_bias)
+    exp_idx_max_tc <- GetExpTimeQuenchIdx(trc_data_bias) - 1
     exp_idx_max_dp <- rep(length(trc_data_bias$exp_data[[2]][,1]), 4)
-    
-    # Now the input parameters becomes 15 (12 + 3 bias scale parameters)
-    llk <- function(x) {
-        GetLogLikelihood(c(x[1:(length(x)-3)], x[length(x)-2]), sampled_idx,
-                      exp_vec[["tc"]], num_pc[["tc"]], time_idx[["tc"]], 
-                      trc_gps_pcs[["tc"]], trc_pca_ave[["tc"]], 
-                      trc_pca_lds[["tc"]], trc_gp_bias[["tc"]], 
-                      ax_locs = unique(trc_gp_bias[["tc"]]@X[,5]),
-                      time_pts = unique(trc_gp_bias[["tc"]]@X[,6])[-1],
-                      exp_idx_max_tc - 1) +
-            GetLogLikelihood(c(x[1:(length(x)-3)], x[length(x)-1]), 
-                          sampled_idx,
-                          exp_vec[["dp"]], num_pc[["dp"]], time_idx[["dp"]], 
-                          trc_gps_pcs[["dp"]], trc_pca_ave[["dp"]], 
-                          trc_pca_lds[["dp"]], trc_gp_bias[["dp"]], 
-                          ax_locs = unique(trc_gp_bias[["dp"]]@X[,5]), 
-                          time_pts = unique(trc_gp_bias[["dp"]]@X[,6]), 
-                          exp_idx_max_dp) + 
-            GetLogLikelihood(c(x[1:(length(x)-3)], x[length(x)]), sampled_idx,
-                          exp_vec[["co"]], num_pc[["co"]], time_idx[["co"]], 
-                          trc_gps_pcs[["co"]], trc_pca_ave[["co"]], 
-                          trc_pca_lds[["co"]], trc_gp_bias[["co"]],
-                          ax_locs = NULL, 
-                          time_pts = unique(trc_gp_bias[["co"]]@X[,5]),
-                          exp_idx_max = NULL)
-    }
-} else if (trc_outputs[1] == "tc")
-{
-    ax_locs <- unique(trc_gp_bias[["tc"]]@X[,5])
-    time_pts <- unique(trc_gp_bias[["tc"]]@X[,6])
-    exp_idx_max <- GetExpTimeQuenchIdx(trc_data_bias)
-    llk <- function(x) {
-        GetLogLikelihood(x, sampled_idx,
-                      exp_vec[["tc"]], num_pc[["tc"]], time_idx[["tc"]], 
-                      trc_gps_pcs[["tc"]], trc_pca_ave[["tc"]], 
-                      trc_pca_lds[["tc"]], trc_gp_bias[["tc"]], 
-                      ax_locs, time_pts[-1], exp_idx_max - 1)
-    }
-} else if (trc_outputs[1] == "dp")
-{
-    ax_locs <- unique(trc_gp_bias[["dp"]]@X[,5])
-    time_pts <- unique(trc_gp_bias[["dp"]]@X[,6])
-    exp_idx_max <- rep(length(trc_data_bias$exp_data[[2]][,1]), 4)
-    
-    llk <- function(x) {
-        GetLogLikelihood(x, sampled_idx,
-                      exp_vec[["dp"]], num_pc[["dp"]], time_idx[["dp"]], 
-                      trc_gps_pcs[["dp"]], trc_pca_ave[["dp"]], 
-                      trc_pca_lds[["dp"]], trc_gp_bias[["dp"]], 
-                      ax_locs, time_pts, exp_idx_max)
-    }
-} else if (trc_outputs[1] == "co")
-{
-    ax_locs <- NULL
-    time_pts <- unique(trc_gp_bias[["co"]]@X[,5])
+    exp_idx_max_co <- NULL
 
+    if (opt$fix_scale)
+    {
+        llk <- function(x) {
+            GetLogLikelihood(
+                x, sampled_idx, opt$fix_bc, opt$correct_bias, opt$fix_scale,
+                exp_vec[["tc"]], num_pc[["tc"]], time_idx[["tc"]], 
+                trc_gps_pcs[["tc"]], trc_pca_ave[["tc"]], 
+                trc_pca_lds[["tc"]], trc_gp_bias[["tc"]], 
+                ax_locs = unique(trc_gp_bias[["tc"]]@X[,5]),
+                time_pts = unique(trc_gp_bias[["tc"]]@X[,6])[-1],
+                exp_idx_max = exp_idx_max_tc) +
+                    GetLogLikelihood(
+                        x, sampled_idx,
+                        opt$fix_bc, opt$correct_bias, opt$fix_scale,          
+                        exp_vec[["dp"]], num_pc[["dp"]], time_idx[["dp"]], 
+                        trc_gps_pcs[["dp"]], trc_pca_ave[["dp"]], 
+                        trc_pca_lds[["dp"]], trc_gp_bias[["dp"]], 
+                        ax_locs = unique(trc_gp_bias[["dp"]]@X[,5]), 
+                        time_pts = unique(trc_gp_bias[["dp"]]@X[,6]), 
+                        exp_idx_max = exp_idx_max_dp) + 
+                    GetLogLikelihood(
+                        x, sampled_idx,
+                        opt$fix_bc, opt$correct_bias, opt$fix_scale,
+                        exp_vec[["co"]], num_pc[["co"]], time_idx[["co"]], 
+                        trc_gps_pcs[["co"]], trc_pca_ave[["co"]], 
+                        trc_pca_lds[["co"]], trc_gp_bias[["co"]],
+                        ax_locs = NULL, 
+                        time_pts = unique(trc_gp_bias[["co"]]@X[,5]),
+                        exp_idx_max = exp_idx_max_co)
+        }
+    } else {
+        # Now the input parameters becomes 15 (12 + 3 bias scale parameters)
+        llk <- function(x) {
+            GetLogLikelihood(
+                c(x[1:(length(x)-3)], x[length(x)-2]), sampled_idx,
+                opt$fix_bc, opt$correct_bias, opt$fix_scale,
+                exp_vec[["tc"]], num_pc[["tc"]], time_idx[["tc"]], 
+                trc_gps_pcs[["tc"]], trc_pca_ave[["tc"]], 
+                trc_pca_lds[["tc"]], trc_gp_bias[["tc"]], 
+                ax_locs = unique(trc_gp_bias[["tc"]]@X[,5]),
+                time_pts = unique(trc_gp_bias[["tc"]]@X[,6])[-1],
+                exp_idx_max = exp_idx_max_tc) +
+                    GetLogLikelihood(
+                        c(x[1:(length(x)-3)], x[length(x)-1]), 
+                        sampled_idx,
+                        opt$fix_bc, opt$correct_bias, opt$fix_scale,          
+                        exp_vec[["dp"]], num_pc[["dp"]], time_idx[["dp"]], 
+                        trc_gps_pcs[["dp"]], trc_pca_ave[["dp"]], 
+                        trc_pca_lds[["dp"]], trc_gp_bias[["dp"]], 
+                        ax_locs = unique(trc_gp_bias[["dp"]]@X[,5]), 
+                        time_pts = unique(trc_gp_bias[["dp"]]@X[,6]), 
+                        exp_idx_max = exp_idx_max_dp) + 
+                    GetLogLikelihood(
+                        c(x[1:(length(x)-3)], x[length(x)]), sampled_idx,
+                        opt$fix_bc, opt$correct_bias, opt$fix_scale,
+                        exp_vec[["co"]], num_pc[["co"]], time_idx[["co"]], 
+                        trc_gps_pcs[["co"]], trc_pca_ave[["co"]], 
+                        trc_pca_lds[["co"]], trc_gp_bias[["co"]],
+                        ax_locs = NULL, 
+                        time_pts = unique(trc_gp_bias[["co"]]@X[,5]),
+                        exp_idx_max = exp_idx_max_co)
+        }
+    }
+    
+} else 
+{
+    if (trc_outputs[1] == "tc")
+    {
+        ax_locs <- unique(trc_gp_bias[["tc"]]@X[,5])
+        time_pts <- unique(trc_gp_bias[["tc"]]@X[,6])[-1]
+        exp_idx_max <- GetExpTimeQuenchIdx(trc_data_bias) - 1
+
+    } else if (trc_outputs[1] == "dp")
+    {
+        ax_locs <- unique(trc_gp_bias[["dp"]]@X[,5])
+        time_pts <- unique(trc_gp_bias[["dp"]]@X[,6])
+        exp_idx_max <- rep(length(trc_data_bias$exp_data[[2]][,1]), 4)
+    } else if(trc_outputs[1] == "co")
+    {
+        ax_locs <- NULL
+        time_pts <- unique(trc_gp_bias[["co"]]@X[,5])
+        exp_idx_max <- NULL
+    }
+    
     llk <- function(x) {
-        GetLogLikelihood(x, sampled_idx,
-                      exp_vec[["co"]], num_pc[["co"]], time_idx[["co"]], 
-                      trc_gps_pcs[["co"]], trc_pca_ave[["co"]], 
-                      trc_pca_lds[["co"]], trc_gp_bias[["co"]],
-                      ax_locs, time_pts)
+        GetLogLikelihood(
+            x, sampled_idx, opt$fix_bc, opt$correct_bias, opt$fix_scale,
+            exp_vec[[trc_outputs[1]]], num_pc[[trc_outputs[1]]], 
+            time_idx[[trc_outputs[1]]], 
+            trc_gps_pcs[[trc_outputs[1]]], trc_pca_ave[[trc_outputs[1]]], 
+            trc_pca_lds[[trc_outputs[1]]], trc_gp_bias[[trc_outputs[1]]], 
+            ax_locs, time_pts, exp_idx_max)
     }
 }
 
-# Log Posterior
+# Log-Posterior
 lpost <- function(x)
 {
     lp <- lprior(x)
@@ -238,10 +288,10 @@ n_iters <- opt$n_iters
 
 post_samples <- setInitialValues(
     length(sampled_idx),
+    opt$fix_scale,
     init_sd_bias,
     n_walks,
-    n_iters,
-    trc_outputs)
+    n_iters)
 
 # Run Sampler
 ens <- GoodmanWeare.rem(post_samples, lpost, 
