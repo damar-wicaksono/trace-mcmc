@@ -42,7 +42,10 @@ option_list <- list(
                 metavar = "integer"),
     make_option(c("--n_iters"), type = "integer", default = 10,
                 help = "The number of iterations",
-                metavar = "integer")
+                metavar = "integer"),
+    make_option(c("--output_file"), type = "character", default = NULL,
+                help = "The output filename",
+                metavar = "character")
 )
 
 opt_parser <- OptionParser(option_list = option_list) # Create opt. parser obj.
@@ -245,6 +248,4 @@ ens <- GoodmanWeare.rem(post_samples, lpost,
     mc.cores = opt$numprocs, mention.every = 10)
 
 # Save the samples
-saveRDS(ens, 
-  paste("ens-", opt$output, "-", n_walks, "-", n_iters, "-", 
-        length(sampled_idx), "params.Rds", sep = ""))
+saveRDS(ens, opt$output_file)
