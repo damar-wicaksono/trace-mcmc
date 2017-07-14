@@ -39,6 +39,10 @@ GetLogLikelihood <- function(x, sampled_idx, exp_vec, num_pc, time_idx,
     # Compute the mean vector based on the restricted time
     ave_vec <- CalcAveVec(pc_scores$mu, 
                           trc_pca_ave, trc_pca_lds, time_idx)
+    
+    # Compute the mean of bias model
+    bias_vec <- predict(trc_gp_bias, newdata = xx_bias, "SK")$mean
+    ave_vec <- ave_vec + bias_vec
 
     # Compute the variance matrix due to PC scores prediction error
     kriging_var_mat <- CalcKrigingVarMat(pc_scores$sd, 
@@ -48,7 +52,7 @@ GetLogLikelihood <- function(x, sampled_idx, exp_vec, num_pc, time_idx,
     truncation_var_mat <- CalcTruncationVarMat(trc_pca_lds, 
                                                length(pc_scores$sd), 
                                                time_idx)
-
+    
     # Compute the variance matrix due to model bias
     bias_var_mat <- CalcBiasVarMat(xx_bias, 
         x[length(x)]^2, 
