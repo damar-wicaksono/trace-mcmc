@@ -38,7 +38,7 @@ setInitialValues <- function(num_model_params,
         for (i in 1:3)
         {
             # Loop over scale parameters of bias model for each output
-            post_samples[(num_model_params)+i,,1] = 
+            post_samples[(num_model_params+i),,1] = 
                 init_sd_bias[[trc_outputs[i]]] + 
                 sd_multiplier[[trc_outputs[i]]] * rnorm(n_walks)
         }        
