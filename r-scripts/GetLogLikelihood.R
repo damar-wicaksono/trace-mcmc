@@ -43,7 +43,7 @@ GetLogLikelihood <- function(x, sampled_idx, fix_bc, correct_bias, fix_scale,
     {
         xx_pcs[1:4] <- rep(0.5, 4)
     }
-    
+
     # Construct data frame for sampled inputs, bias
     str_names <- trc_gp_bias@covariance@var.names
     xx_bias <- CreateInputBias(xx[1:4], 
